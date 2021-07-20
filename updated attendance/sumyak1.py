@@ -619,6 +619,6 @@ async def poll(msg, question, *options: str):
 if __name__ == "__main__":
     try:
         attendance_task.start()
-        bot.run("ODU0NjQwMTY1OTkzNDQ3NDM1.YMm3rg.tTNr1ITvdxJpa4EYILpVKKBNyLs")
+        bot.run("")
     except Exception as _e:
         logging.warning("Exception found at main worker. Reason: " + str(_e), exc_info=True)
