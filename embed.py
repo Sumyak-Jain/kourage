@@ -154,35 +154,32 @@ def show_attendance(start_date,end_date,user_id,check_username):
       attendance_dates=attendance_dates+1
       attendance_list=attendance_list+"\n𝗗𝗔𝗧𝗘: "+dates+"\n"
     
-      cur.execute('''SELECT Time FROM Attendance_DB WHERE  Attendance_DB.User_ID= ? AND Attendance_DB.Date=?''',[user_id,dates]) 
-      attendance = cur.fetchall()
+      cur.execute('''SELECT PRESENTEES FROM Attendance_table WHERE DATE = ? AND SHIFT = ?''', [dates,"M"])
+      morning_presentees = (cur.fetchone())
+      cur.execute('''SELECT ABSENTEES FROM Attendance_table WHERE DATE = ? AND SHIFT = ?''', [dates,"M"])
+      morning_absentees= (cur.fetchone())
       
-      time_list=[]
-      time=str(attendance)
-      bad_chars = ['(', ')', ',', "'"]
-      for i in bad_chars: 
-        time=time.replace(i, '')
+      cur.execute('''SELECT PRESENTEES FROM Attendance_table WHERE DATE = ? AND SHIFT = ?''', [dates,"E"])
+      evening_presentees = (cur.fetchone())
+      cur.execute('''SELECT ABSENTEES FROM Attendance_table WHERE DATE = ? AND SHIFT = ?''', [dates,"E"])
+      evening_absentees= (cur.fetchone())
       
-      time_list.append(time);
+      str0 = morning_presentees[0][1:-1]
+      morning_presentees=set(str0.split(', '))
+      
+   
+      str1 = morning_absentees[0][1:-1]
+      morning_absentees=set(str1.split(', '))
+      
+      str2 = evening_presentees[0][1:-1]
+      evening_absentees=set(str2.split(', '))
+   
+      str3 = evening_absentees[0][1:-1]
+      evening_absentees=set(str3.split(', '))
+     
       
     
-      for j in time_list:
-       full_day="ME"
-       morning="M"
-       evening="E"
-       
-       if((j.count(morning)==0) and (j.count(evening)==0 )): 
-            attendance_list=attendance_list+"Full Day Absent"+"\n"
-            absent=absent+1
-       elif (j.count(full_day)>0):
-            attendance_list=attendance_list+"Full Day Present"+"\n"
-            full_present=full_present+1
-       elif((j.count(morning)==0) and j.count(evening)>0 ):
-            evening_present=evening_present+1
-            attendance_list=attendance_list+"Present in Evening shift"+"\n" 
-       elif((j.count(evening)==0) and (j.count(morning)>0)):
-            morning_present=morning_present+1
-            attendance_list=attendance_list+"Present in Morning shift"+"\n"   
+      
       
     attendence_Embed.add_field(name='Attendance List', value = attendance_list, inline=False)  
     
