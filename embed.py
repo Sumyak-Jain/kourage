@@ -44,7 +44,7 @@ class Logger:
         print(colored(f'[{time.asctime(time.localtime())}] [{machine}] [{self.app}] {message}', color))
 
 
-#logger = Logger("kourage-boilerplate")
+logger = Logger("kourage-Attendance")
 def attendance(opening_time, closing_time):
     embed = discord.Embed(title="Attendance System",
                           description="Please react before closing time else the message will disappear ",
@@ -82,59 +82,97 @@ def attendance_missed_dm(date, time, day):
     return embed
 
 def show_leaves(start_date,end_date,user_id,check_username):
+    logger.info("Show leaves called")
     conn = sqlite3.connect('Attendance_DB.sqlite')
     cur = conn.cursor()
-    
-
-
     def daterange(start_date, end_date):
       for n in range(int((end_date - start_date).days)):
           yield start_date + timedelta(n)
  
-    leaves_Embed=simple_embed(title="Leaves for : "+str(check_username)+"\n",description="")
+    attendence_Embed=simple_embed(title="Leaves for : "+str(check_username)+"\n",description="")
 
-    leave_list=""
+    attendance_list=""
     
+
     for single_date in daterange(start_date, end_date):
+      present_morning=False
+      present_evening=False
+      absent_morning=False
+      absent_evening=False
       dates=str(single_date.strftime("%Y-%m-%d"))
-      leave_list=leave_list+"\n𝗗𝗔𝗧𝗘: "+dates+"\n"
+      attendance_list=attendance_list+"\n𝗗𝗔𝗧𝗘: "+dates+"\n"
     
-      cur.execute('''SELECT Time FROM Attendance_DB WHERE  Attendance_DB.User_ID= ? AND Attendance_DB.Date=?''',[user_id,dates]) 
-      attendance = cur.fetchall()
+      cur.execute('''SELECT PRESENTEES FROM Attendance_table WHERE DATE = ? AND SHIFT = ?''', [dates,"M"])
+      morning_presentees = (cur.fetchone())
+      if(str(morning_presentees)=="None"): 
+          morning_presentees=="None"
+      else:
+          str0 = morning_presentees[0][1:-1]
+          morning_presentees=set(str0.split(', '))
+          for i in morning_presentees:
+              if(i==str(user_id)): 
+                present_morning=True
+          
+      cur.execute('''SELECT ABSENTEES FROM Attendance_table WHERE DATE = ? AND SHIFT = ?''', [dates,"M"])
+      morning_absentees= (cur.fetchone())
+      if(str(morning_absentees)=="None"): 
+          morning_absentees=="None"
+          
+      else: 
+        str1 = morning_absentees[0][1:-1]
+        morning_absentees=set(str1.split(', '))
+        for i in morning_absentees: 
+             if(i==str(user_id)): 
+                absent_morning=True
       
-      time_list=[]
-      time=str(attendance)
-      bad_chars = ['(', ')', ',', "'"]
-      for i in bad_chars: 
-        time=time.replace(i, '')
+      cur.execute('''SELECT PRESENTEES FROM Attendance_table WHERE DATE = ? AND SHIFT = ?''', [dates,"E"])
+      evening_presentees = (cur.fetchone())
+      if(str(evening_presentees)=="None"): 
+          evening_presentees=="None"
+      else: 
+            str2 = evening_presentees[0][1:-1]
+            evening_presentees=set(str2.split(', '))
+            for i in evening_presentees: 
+               if(i==str(user_id)): 
+                  present_evening=True
+          
+      cur.execute('''SELECT ABSENTEES FROM Attendance_table WHERE DATE = ? AND SHIFT = ?''', [dates,"E"])
+      evening_absentees= (cur.fetchone())
+      if(str(evening_absentees)=="None"): 
+         evening_absentees=="None" 
+      else: 
+           str3 = evening_absentees[0][1:-1]
+           evening_absentees=set(str3.split(', '))
+           for i in evening_absentees: 
+             if(i==str(user_id)): 
+                absent_evening=True
+  
+      if((present_morning==True) and (present_evening==True)): 
+          attendance_list=attendance_list+"Present full day\n"
+         
+      elif((present_morning==False) and (present_evening==True)): 
+          attendance_list=attendance_list+"Absent in morning\n"
+          
+      elif((present_morning==True) and (present_evening==False)): 
+          attendance_list=attendance_list+"Absent in evening\n"
+         
+      elif((absent_morning==True) and (absent_evening==True)): 
+          attendance_list=attendance_list+"Absent full day\n"
+        
       
-      time_list.append(time);
-      
+    attendence_Embed.add_field(name='Leaves List', value = attendance_list, inline=False)  
     
-      for j in time_list:
-       full_day="ME"
-       morning="M"
-       evening="E"
-       
-       if((j.count(morning)==0) and (j.count(evening)==0 )): 
-            leave_list=leave_list+"Full Day leave"+"\n"
-       elif (j.count(full_day)>0):
-            leave_list=leave_list+"Full Day Present"+"\n"
-       elif((j.count(morning)==0) and j.count(evening)>0 ):
-            leave_list=leave_list+"Absent in morning"+"\n" 
-       elif((j.count(evening)==0) and (j.count(morning)>0)):
-            leave_list=leave_list+"Absent in evening shift"+"\n"   
-      
-    leaves_Embed.add_field(name='Leave List', value = leave_list, inline=False)  
+    return attendence_Embed
    
      
-    return leaves_Embed
+    
     
 
 
 
 
 def show_attendance(start_date,end_date,user_id,check_username):
+    logger.info("Show attendance called")
     conn = sqlite3.connect('Attendance_DB.sqlite')
     cur = conn.cursor()
     def daterange(start_date, end_date):
@@ -149,40 +187,77 @@ def show_attendance(start_date,end_date,user_id,check_username):
     morning_present=0
     evening_present=0
     absent=0
+    
+
     for single_date in daterange(start_date, end_date):
+      present_morning=False
+      present_evening=False
+      absent_morning=False
+      absent_evening=False
       dates=str(single_date.strftime("%Y-%m-%d"))
       attendance_dates=attendance_dates+1
       attendance_list=attendance_list+"\n𝗗𝗔𝗧𝗘: "+dates+"\n"
     
-      cur.execute('''SELECT Time FROM Attendance_DB WHERE  Attendance_DB.User_ID= ? AND Attendance_DB.Date=?''',[user_id,dates]) 
-      attendance = cur.fetchall()
+      cur.execute('''SELECT PRESENTEES FROM Attendance_table WHERE DATE = ? AND SHIFT = ?''', [dates,"M"])
+      morning_presentees = (cur.fetchone())
+      if(str(morning_presentees)=="None"): 
+          morning_presentees=="None"
+      else:
+          str0 = morning_presentees[0][1:-1]
+          morning_presentees=set(str0.split(', '))
+          for i in morning_presentees:
+              if(i==str(user_id)): 
+                present_morning=True
+          
+      cur.execute('''SELECT ABSENTEES FROM Attendance_table WHERE DATE = ? AND SHIFT = ?''', [dates,"M"])
+      morning_absentees= (cur.fetchone())
+      if(str(morning_absentees)=="None"): 
+          morning_absentees=="None"
+          
+      else: 
+        str1 = morning_absentees[0][1:-1]
+        morning_absentees=set(str1.split(', '))
+        for i in morning_absentees: 
+             if(i==str(user_id)): 
+                absent_morning=True
       
-      time_list=[]
-      time=str(attendance)
-      bad_chars = ['(', ')', ',', "'"]
-      for i in bad_chars: 
-        time=time.replace(i, '')
-      
-      time_list.append(time);
+      cur.execute('''SELECT PRESENTEES FROM Attendance_table WHERE DATE = ? AND SHIFT = ?''', [dates,"E"])
+      evening_presentees = (cur.fetchone())
+      if(str(evening_presentees)=="None"): 
+          evening_presentees=="None"
+      else: 
+            str2 = evening_presentees[0][1:-1]
+            evening_presentees=set(str2.split(', '))
+            for i in evening_presentees: 
+               if(i==str(user_id)): 
+                  present_evening=True
+          
+      cur.execute('''SELECT ABSENTEES FROM Attendance_table WHERE DATE = ? AND SHIFT = ?''', [dates,"E"])
+      evening_absentees= (cur.fetchone())
+      if(str(evening_absentees)=="None"): 
+         evening_absentees=="None" 
+      else: 
+           str3 = evening_absentees[0][1:-1]
+           evening_absentees=set(str3.split(', '))
+           for i in evening_absentees: 
+             if(i==str(user_id)): 
+                absent_evening=True
+  
+      if((present_morning==True) and (present_evening==True)): 
+          attendance_list=attendance_list+"Present full day\n"
+          full_present=full_present+1
+      elif((present_morning==False) and (present_evening==True)): 
+          attendance_list=attendance_list+"Present in evening only\n"
+          evening_present=evening_present+1
+      elif((present_morning==True) and (present_evening==False)): 
+          attendance_list=attendance_list+"Present in morning only\n"
+          morning_present=morning_present+1
+      elif((absent_morning==True) and (absent_evening==True)): 
+          attendance_list=attendance_list+"Absent full day\n"
+          absent=absent+1
       
     
-      for j in time_list:
-       full_day="ME"
-       morning="M"
-       evening="E"
-       
-       if((j.count(morning)==0) and (j.count(evening)==0 )): 
-            attendance_list=attendance_list+"Full Day Absent"+"\n"
-            absent=absent+1
-       elif (j.count(full_day)>0):
-            attendance_list=attendance_list+"Full Day Present"+"\n"
-            full_present=full_present+1
-       elif((j.count(morning)==0) and j.count(evening)>0 ):
-            evening_present=evening_present+1
-            attendance_list=attendance_list+"Present in Evening shift"+"\n" 
-       elif((j.count(evening)==0) and (j.count(morning)>0)):
-            morning_present=morning_present+1
-            attendance_list=attendance_list+"Present in Morning shift"+"\n"   
+      
       
     attendence_Embed.add_field(name='Attendance List', value = attendance_list, inline=False)  
     

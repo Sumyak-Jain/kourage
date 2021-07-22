@@ -1,5 +1,4 @@
 import datetime
-
 def check_leaves():
     '''
     This function has basic functionalities of checking leaves
@@ -46,5 +45,4 @@ def check_leaves():
                     logger.error("Something went wrong while fetching the full day attendance")
 
         return morning_only, evening_only, full_day
-
 check_leaves()
