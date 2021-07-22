@@ -216,6 +216,76 @@ async def show_absentees(date, shift_status, absentees):
     
 
 
+@bot.command()
+async def leaves(ctx,*argv):
+    user_list=[] 
+    user_id_dict =dict()
+    author_role = ctx.author.roles
+    role=""
+    
+    #TODO
+    if((str(author_role[1]))=="Koders"): 
+       role="Koders"
+       
+    #check all leaves
+    if not argv:             
+        if(role=="Koders"): 
+          print("check all")
+          start_date,end_date=await embed.data_input(ctx,bot)
+          #call_function(start_date,end_date,)
+          
+        elif(role!="Koders"): 
+          print(ctx.author.id)
+          start_date,end_date=await embed.data_input(ctx,bot)
+          user_id=ctx.author.id
+          username=ctx.author.name
+          #call_function(start_date,end_date,user_id,username,flag1,flag2)
+          
+    
+    else: 
+         for arg in argv:  
+           arg:discord.Member
+           user=str(arg)
+           bad_chars = ['<', '>', '@', "!"]
+           for i in bad_chars: 
+              user=user.replace(i, '') 
+           user_id=(user)
+           
+           user_id_dict[user_id]=str(await bot.fetch_user(int(user_id)))
+           user_list.append((user_id))
+          
+       #check multiple user leaves
+         if(role=="Koders"): 
+             start_date,end_date=await embed.data_input(ctx,bot)
+             user_id=user_id_dict
+             #call_function(start_date,end_date,user_id,username,flag1,flag2)
+                  
+         elif(role!="Koders"): 
+            not_access_embed=discord.Embed(title="Sorry You dont have access to view others leaves!",description="",colour=0x11806a)
+            await ctx.send(embed=not_access_embed,delete_after=60)
+            logger.warning(str(ctx.author.id)+" dont have access")
+    
+    
+    
+    
+    #check single user leave  
+    '''
+    if(len(user_list)==1): 
+        if((ctx.author.id) != int(user_list[0])): 
+            if(role != "Koders"):  
+             print("you dont have access")
+            elif(role == "Koders"): 
+             print("checking others leaves")
+        else: 
+            print(user_list)
+    ''' 
+   
+    
+    
+    
+    
+    
+
 #manual mark specific
 @bot.command()
 async def mark_attendance(ctx):
