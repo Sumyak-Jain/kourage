@@ -415,7 +415,7 @@ async def specific_leaves(ctx, *,user: discord.Member):
         start_date = datetime.datetime.strptime(start_date1, '%Y-%m-%d')
         end_date = datetime.datetime.strptime(end_date1, '%Y-%m-%d')
         leaves=embed.show_leaves(start_date,end_date,check_user,check_username)
-        await ctx.send(embed=leaves, delete_after = 80)
+        await ctx.send(embed=leaves, delete_after = 20)
         logger.warning(str(check_username)+" leaves shown")
 
     if user_author != check_user:
@@ -446,7 +446,7 @@ async def specific_leaves(ctx, *,user: discord.Member):
             start_date = datetime.datetime.strptime(start_date1, '%Y-%m-%d')
             end_date = datetime.datetime.strptime(end_date1, '%Y-%m-%d')
             leaves=embed.show_leaves(start_date,end_date,check_user,check_username)
-            await ctx.send(embed=leaves, delete_after = 80)
+            await ctx.send(embed=leaves, delete_after = 20)
             logger.warning(str(check_username)+" leaves shown")
 
         else:
@@ -483,7 +483,7 @@ async def check_attendance(ctx, *,user: discord.Member):
         start_date = datetime.datetime.strptime(start_date1, '%Y-%m-%d')
         end_date = datetime.datetime.strptime(end_date1, '%Y-%m-%d')
         attendance,save_filename=embed.show_attendance(start_date,end_date,check_user,check_username)
-        await ctx.send(embed=attendance,file=discord.File(save_filename), delete_after = 80)
+        await ctx.send(embed=attendance,file=discord.File(save_filename), delete_after = 20)
         logger.warning(str(check_username)+" Attendace shown")
 
     if user_author != check_user:
