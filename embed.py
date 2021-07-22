@@ -164,7 +164,24 @@ def show_leaves(start_date,end_date,user_id,check_username):
     
     return attendence_Embed
    
-     
+    
+async def data_input(ctx,bot): 
+    start_date_embed=discord.Embed(title="Enter start date",description="Please enter in this format only 'yyyy-mm-dd'",colour=0x11806a)
+    start=await ctx.send(embed=start_date_embed,delete_after=60)
+    start_date1 = await ctx_input(ctx, bot, start)
+    if not start_date1:
+        return
+
+    end_date_embed=discord.Embed(title="Enter end date",description="Please enter in this format only 'yyyy-mm-dd'",colour=0x11806a)
+    end=await ctx.send(embed=end_date_embed,delete_after=60)
+    end_date1 = await ctx_input(ctx, bot, end)
+    if not end_date1:
+        return
+    
+    start_date = datetime.datetime.strptime(start_date1, '%Y-%m-%d')
+    end_date = datetime.datetime.strptime(end_date1, '%Y-%m-%d')
+    
+    return start_date,end_date;
     
     
 
