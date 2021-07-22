@@ -73,52 +73,136 @@ def attendance_missed_dm(date, time, day):
     embed.add_field(name="Day", value=day, inline=True)
     return embed
 
-def show(start_date, end_date, user_id, username):
+def leave_and_attendance(ctx, bot, start_date, end_date, users, mode):
     """
     This module shows attendance and leaves
     :params: start_date(str), end_date(str), user_id(int), username(str)
     :return: None
+    :mode: 1 - for attendance, 2 - leaves
     """
     logger.info("Show attendance called")
-    dates=str(single_date.strftime("%Y-%m-%d"))
-
-    attendance_list=""
-    attendance_list=attendance_list+"\n𝗗𝗔𝗧𝗘: "+dates+"\n"
 
     conn = sqlite3.connect('ATTENDANCE.sqlite')
     cur = conn.cursor()
-    cur.execute('''SELECT * FROM ATTENDANCE WHERE ''')
+    if mode == 1:
+        cur.execute('''SELECT DATE, SHIFT, PRESENTEES FROM ATTENDANCE WHERE DATE BETWEEN ? AND ?''', str(start_date), str(end_date))
+    if mode == 2:
+        cur.execute('''SELECT DATE, SHIFT, ABSENTEES FROM ATTENDANCE WHERE DATE BETWEEN ? AND ?''', str(start_date), str(end_date))
     data = cur.fetchone()
 
     if not data: # TODO Check if this is working
       logger.warning("No attendance data found between those dates")
       return None
     else:
-      members=set(data[0][3][1:-1].split(', '))
+    # TODO - try with string strips
       morning_only, evening_data, full_day = {}, {}, {}
 
-      # TODO
-      # Convert string to set back without string manipulation
-      # Absentees
       for each in data:
           selected_dates = []
           if each[1] == "M":
-              morning_only[each[0]] = set(each[3][1: -1].split(', ')) # Adding absentees
+              morning_only[each[0]] = set(each[2].strip('"{}').split(', ')) # Adding members
           elif each[1] == "E":
-              evening_only[each[0]] = set(each[3][1: -1].split(', ')) # Adding absentees
+              evening_only[each[0]] = set(each[2].strip('"{}').split(', ')) # Adding members
+          selected_dates.append(each[0])
+
+        # Calculating all possible dates and adding members accordingly
+        selected_dates = set(selected_dates) # For finding unique dates
+        for each_date in selected_dates:
+            for each_person in morning_only[each_date]:
+                try:
+                    if each_person in evening_only[each_date]:
+                        full_day[each_date].append(each_person)
+
+                        # if full day is found. removing from morning and evening
+                        morning_only.remove(each_person)
+                        evening_only.remove(each_person)
+                except Exception as err:
+                    logger.error("Something went wrong while fetching the full day attendance")
+
+    if users:
+        if mode == 1:
+            status = "Present"
+        elif mode == 2:
+            status = "Absent"
+
+        for user in users:
+            message=""
+            for each_date in selected_dates:
+                try:
+                    if user in full_day[each_date]:
+                        message += each_date + ": " + status + " in full day \n"
+                    elif user in morning_only[each_date]:
+                        message += each_date + ": " + status + " in morning only \n"
+                    elif user in evening[each_date]:
+                        message += each_date + ": " + status + " in evening only \n"
+                except Exception as e:
+                    pass # handling KeyError in dict
+
+            embed=simple_embed(title="Result for: "+str(bot.get_user(user)+"\n",description="")
+            embed.add_field(name='Here are the details', value=message, inline=False)
+            await ctx.send(embed=embed, delete_after=60)
+
+async def data_input(ctx, bot):
+    start_date_embed=discord.Embed(title="Enter start date",description="Please enter in this format only 'yyyy-mm-dd'",colour=0x11806a)
+    start=await ctx.send(embed=start_date_embed,delete_after=60)
+    start_date1 = await ctx_input(ctx, bot, start)
+    if not start_date1:
+        return
+
+    end_date_embed=discord.Embed(title="Enter end date",description="Please enter in this format only 'yyyy-mm-dd'",colour=0x11806a)
+    end=await ctx.send(embed=end_date_embed,delete_after=60)
+    end_date1 = await ctx_input(ctx, bot, end)
+    if not end_date1:
+        return
+
+    start_date = datetime.datetime.strptime(start_date1, '%Y-%m-%d')
+    end_date = datetime.datetime.strptime(end_date1, '%Y-%m-%d')
+
+    return start_date, end_date;
+
+    attendance_embed=simple_embed(title="Leaves for : "+str(username)+"\n",description="")
+    attendance_embed.add_field(name='Leaves List', value = attendance_list, inline=False)
+
+    return attendance_embed
+
+def attendance(ctx, bot, start_date, end_date, user_id, mode, flag):
+    """
+    This module shows attendance and leaves
+    :params: start_date(str), end_date(str), user_id(int), username(str)
+    :return: None
+    """
+    logger.info("Attendance function called")
+
+    attendance_list=""
+    attendance_list=attendance_list+"\n𝗗𝗔𝗧𝗘: "+dates+"\n"
+
+    conn = sqlite3.connect('ATTENDANCE.sqlite')
+    cur = conn.cursor()
+
+    # TODO
+    # Fix sql query
+    if flag == 1:
+        cur.execute('''SELECT DATE, SHIFT, PRESENTEES FROM ATTENDANCE WHERE ''')
+    elif flag == 2:
+        cur.execute('''SELECT DATE, SHIFT, ABSENTEES FROM ATTENDANCE WHERE ''')
+    data = cur.fetchone()
+
+    if not data: # TODO Check if this is working
+      logger.warning("No attendance data found between those dates")
+      return None
+    else:
+      morning_only, evening_data, full_day = {}, {}, {}
+
+      for each in data:
+          selected_dates = []
+          # TODO
+          # Check strip
+          if each[1] == "M":
+              morning_only[each[0]] = set(each[2].strip("'{}'").split(', ')) # Adding members
+          elif each[1] == "E":
+              evening_only[each[0]] = set(each[2].strip("'{}'").split(', ')) # Adding members
           selected_dates.append(each[0])
       selected_dates = set(selected_dates) # Unique dates
-
-    # -- Collide
-    #  ~leaves - All - Kore
-    #  ~leaves - @mention if not ctx.mention:
-    #  ~leaves - Not Kore - Yours
-    #  ~leaves - @mention - Not Kore - Warning(You cant check)
-
-    #  ~attendance - All
-    #  ~attendance - @mention
-    #  ~attendance - Not Kore - Yours
-    #  ~attendance - @mention - Not Kore - Warning(You can't check)
 
     for each_date in selected_dates:
         for each_person in morning_only[each_date]:
@@ -132,25 +216,9 @@ def show(start_date, end_date, user_id, username):
             except Exception as err:
                 logger.error("Something went wrong while fetching the full day attendance")
 
-     for each in morning_only:
-         print(each)
+    return morning_only, evening_only, full_day
+    morning_only[dates] = set of presntees
 
-        # Calculating all possible dates and adding members accordingly
-
-        selected_dates = set(selected_dates) # For finding unique dates
-        for each_date in selected_dates:
-            for each_person in morning_only[each_date]:
-                try:
-                    if each_person in evening_only[each_date]:
-                        full_day[each_date].append(each_person) # this should be in try and catch
-
-                        # if full day is found. removing from morning and evening
-                        morning_only.remove(each_person)
-                        evening_only.remove(each_person)
-                except Exception as err:
-                    logger.error("Something went wrong while fetching the full day attendance")
-
-        return morning_only, evening_only, full_day
 
       if((present_morning==True) and (present_evening==True)):
           attendance_list=attendance_list+"Present full day\n"
@@ -165,91 +233,6 @@ def show(start_date, end_date, user_id, username):
     attendance_embed.add_field(name='Leaves List', value = attendance_list, inline=False)
 
     return attendance_embed
-
-def show_attendance(start_date, end_date, user_id, check_username):
-    logger.info("Show attendance called")
-    conn = sqlite3.connect('ATTENDANCE.sqlite')
-    cur = conn.cursor()
-    def daterange(start_date, end_date):
-      for n in range(int((end_date - start_date).days)):
-          yield start_date + timedelta(n)
-
-    attendance_embed=simple_embed(title="Attendance for : "+str(username)+"\n",description="")
-    attendance_list=""
-    attendance_dates=0
-    full_present=0
-    morning_present=0
-    evening_present=0
-    absent=0
-
-    for single_date in daterange(start_date, end_date):
-      present_morning=False
-      present_evening=False
-      absent_morning=False
-      absent_evening=False
-      dates=str(single_date.strftime("%Y-%m-%d"))
-      attendance_dates=attendance_dates+1
-      attendance_list=attendance_list+"\n𝗗𝗔𝗧𝗘: "+dates+"\n"
-
-      cur.execute('''SELECT PRESENTEES FROM Attendance_table WHERE DATE = ? AND SHIFT = ?''', [dates,"M"])
-      morning_presentees = (cur.fetchone())
-      if(str(morning_presentees)=="None"):
-          morning_presentees=="None"
-      else:
-          str0 = morning_presentees[0][1:-1]
-          morning_presentees=set(str0.split(', '))
-          for i in morning_presentees:
-              if(i==str(user_id)):
-                present_morning=True
-
-      cur.execute('''SELECT ABSENTEES FROM Attendance_table WHERE DATE = ? AND SHIFT = ?''', [dates,"M"])
-      morning_absentees= (cur.fetchone())
-      if(str(morning_absentees)=="None"):
-          morning_absentees=="None"
-
-      else:
-        str1 = morning_absentees[0][1:-1]
-        morning_absentees=set(str1.split(', '))
-        for i in morning_absentees:
-             if(i==str(user_id)):
-                absent_morning=True
-
-      cur.execute('''SELECT PRESENTEES FROM Attendance_table WHERE DATE = ? AND SHIFT = ?''', [dates,"E"])
-      evening_presentees = (cur.fetchone())
-      if(str(evening_presentees)=="None"):
-          evening_presentees=="None"
-      else:
-            str2 = evening_presentees[0][1:-1]
-            evening_presentees=set(str2.split(', '))
-            for i in evening_presentees:
-               if(i==str(user_id)):
-                  present_evening=True
-
-      cur.execute('''SELECT ABSENTEES FROM Attendance_table WHERE DATE = ? AND SHIFT = ?''', [dates,"E"])
-      evening_absentees= (cur.fetchone())
-      if(str(evening_absentees)=="None"):
-         evening_absentees=="None"
-      else:
-           str3 = evening_absentees[0][1:-1]
-           evening_absentees=set(str3.split(', '))
-           for i in evening_absentees:
-             if(i==str(user_id)):
-                absent_evening=True
-
-      if((present_morning==True) and (present_evening==True)):
-          attendance_list=attendance_list+"Present full day\n"
-          full_present=full_present+1
-      elif((present_morning==False) and (present_evening==True)):
-          attendance_list=attendance_list+"Present in evening only\n"
-          evening_present=evening_present+1
-      elif((present_morning==True) and (present_evening==False)):
-          attendance_list=attendance_list+"Present in morning only\n"
-          morning_present=morning_present+1
-      elif((absent_morning==True) and (absent_evening==True)):
-          attendance_list=attendance_list+"Absent full day\n"
-          absent=absent+1
-
-    attendance_embed.add_field(name='Attendance List', value = attendance_list, inline=False)
 
     #graph
     def addlabels(x,y):

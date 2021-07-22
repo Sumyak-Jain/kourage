@@ -31,6 +31,9 @@ intents.members = True
 # FOR PRODUCTION
 bot = commands.Bot(command_prefix="~", intents=intents)
 
+# TODO
+# Remove sumyak1 and test.py
+
 @bot.event
 async def on_ready():  # Triggers when bot is ready
    # logger.warning("Kourage is running at version {0}".format(CONFIG.VERSION))
@@ -178,7 +181,7 @@ async def manual_fire(ctx):
         shift_status="M"
     elif check_opening_time.hour > 15:
         shift_status="E"
-    
+
     opening_time=str(timestamp.strftime(r"%I:%M %p"))
     ending_time=str(delta.strftime(r"%I:%M %p"))
     embed = EMBEDS.attendance(opening_time, ending_time)
@@ -201,7 +204,7 @@ async def absentees_morning(ctx):
     today=datetime.date.today()
     current_date = today.strftime("%Y-%m-%d")
     leave_Embed=embed.simple_embed(title="Absent Users on :"+str(current_date)+" morning",description="")
-    
+
     try:
         cur.execute('''SELECT DISTINCT Users_DB_Attendance.User_ID FROM Users_DB_Attendance WHERE NOT EXISTS (SELECT Attendance_DB.User_ID FROM Attendance_DB WHERE Users_DB_Attendance.User_ID = Attendance_DB.User_ID AND Attendance_DB.Date = ?)''', [current_date])
     except Exception as err:
@@ -209,7 +212,7 @@ async def absentees_morning(ctx):
 
     morning_absent = cur.fetchall()
     morning_leave_list=""
-    
+
     for i in morning_absent:
         user_id=str(i)
         bad_chars = ['(', ')', ',', "'"]
@@ -251,7 +254,7 @@ async def absentees_evening(ctx):
         morning_leave_list=morning_leave_list+str(username)+"\n"
 
     leave_Embed.add_field(name='Users list absent in morning and evening both :', value = morning_leave_list+"\n\n\n", inline=False)
-   
+
     #evening
     half_leave_list=[]
     try:
@@ -336,17 +339,17 @@ async def mark_morning(ctx, *,user: discord.Member):
           embed.add_field(name='Attendance marked for:', value = "Morning shift"+"\n\n\n", inline=False)
           await channel.send(embed=embed)
           await ctx.send(embed=embed,delete_after=30)
-          
+
         else:
           else_embed=discord.Embed(title="Sorry attendance already marked",description="",colour=0x11806a)
           end=await ctx.send(embed=else_embed,delete_after=60)
           logger.warning(str(user.id)+" already marked")
-    elif check_opening_time.hour > 14: 
+    elif check_opening_time.hour > 14:
         else_embed=discord.Embed(title="Sorry time limit reached",description="",colour=0x11806a)
         end=await ctx.send(embed=else_embed,delete_after=60)
         logger.warning(str(user.id)+" time limit reached")
-        
-    
+
+
 @bot.command()
 async def mark_evening(ctx, *,user: discord.Member):
    logger.info("'~mark_evening' called.")
@@ -386,13 +389,13 @@ async def mark_evening(ctx, *,user: discord.Member):
           embed.add_field(name='Attendance marked for:', value = "Evening shift"+"\n\n\n", inline=False)
           await channel.send(embed=embed)
           await ctx.send(embed=embed,delete_after=30)
-        
-        else: 
-            if((status.count(full_day)>0)): 
+
+        else:
+            if((status.count(full_day)>0)):
                 else_embed=discord.Embed(title="already marked",description="",colour=0x11806a)
                 end=await ctx.send(embed=else_embed,delete_after=60)
                 logger.warning(str(user.id)+" time limit reached")
-            elif((status.count(morning)>0) and (status.count(evening)==0)): 
+            elif((status.count(morning)>0) and (status.count(evening)==0)):
                status = status + shift_status
                status = str(status)
                try:
@@ -412,7 +415,7 @@ async def mark_evening(ctx, *,user: discord.Member):
         else_embed=discord.Embed(title="Sorry time limit reached",description="",colour=0x11806a)
         end=await ctx.send(embed=else_embed,delete_after=60)
         logger.warning(str(user.id)+" time limit reached")
-    
+
 # check all user leaves
 @bot.command()
 @commands.has_any_role("@Kore")
@@ -456,7 +459,7 @@ async def check_leaves(ctx):
 
         evening_leave_list=""
         evening_leave_list=evening_leave_list+"\n𝗗𝗔𝗧𝗘: "+dates+"\n\n"
-      
+
 
 
         #full leave
@@ -465,7 +468,7 @@ async def check_leaves(ctx):
             full_absent = cur.fetchall()
         except Exception as err:
             logger.error(err.__class__ + " " + str(err))
-            
+
 
         for i in full_absent:
             user_id=str(i)
@@ -505,7 +508,7 @@ async def check_leaves(ctx):
                 leave=str(cur.fetchone())
             except Exception as err:
                 logger.error(err.__class__ + " " + str(err))
-            
+
             bad_chars = ['(', ')', ',', "'"]
             for i in bad_chars:
                 leave=leave.replace(i, '')
@@ -524,7 +527,7 @@ async def check_leaves(ctx):
 
     await ctx.send(embed=leave_Embed,delete_after=90)
     logger.warning("full leaves sent")
-    
+
 #Specific user leave
 @bot.command()
 async def specific_leaves(ctx, *,user: discord.Member):
