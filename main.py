@@ -192,7 +192,7 @@ async def show_absentees(date, shift_status, absentees):
 
     return embed
 
-@bot.command() # TODO - Add kore properities
+@bot.command() #TODO: add kore properties
 async def leaves(ctx, *args):
    
      if str(ctx.author.roles[2]) != "Koders" and args:
@@ -221,7 +221,7 @@ async def leaves(ctx, *args):
         
         await embed.leave_and_attendance(ctx, bot, start_date, end_date, users, 1)
 
-# Attendance Leave Info # TODO - Add kore properities
+# Attendance Leave Info #TODO: add kore properties
 @bot.command()
 async def attendance(ctx, *args):
      
