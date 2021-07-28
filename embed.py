@@ -1,6 +1,7 @@
 import asyncio
 import platform
 import time
+import itertools
 import discord
 import sqlite3
 import datetime
@@ -25,26 +26,19 @@ from termcolor import colored
 machine = platform.node()
 init()
 
-
-
 class Logger:
     def __init__(self, app):
         self.app = app
-
     def info(self, message):
         print(colored(f'[{time.asctime(time.localtime())}] [{machine}] [{self.app}] {message}', 'yellow'))
-
     def warning(self, message):
         print(colored(f'[{time.asctime(time.localtime())}] [{machine}] [{self.app}] {message}', 'green'))
-
     def error(self, message):
         print(colored(f'[{time.asctime(time.localtime())}] [{machine}] [{self.app}] {message}', 'red'))
-
     def color(self, message, color):
         print(colored(f'[{time.asctime(time.localtime())}] [{machine}] [{self.app}] {message}', color))
 
-
-#logger = Logger("kourage-boilerplate")
+logger = Logger("kourage-Attendance")
 def attendance(opening_time, closing_time):
     embed = discord.Embed(title="Attendance System",
                           description="Please react before closing time else the message will disappear ",
@@ -58,6 +52,16 @@ def attendance(opening_time, closing_time):
     embed.set_footer(text="Made with ❤️️  by Koders")
     return embed
 
+def simple_embed(title, description):
+    embed = discord.Embed(
+            title = title,
+            description = description,
+            colour=0x11806a
+            )
+    embed.set_thumbnail(url="https://media.discordapp.net/attachments/700257704723087360/819643015470514236/SYM_TEAL.png?width=455&height=447")
+    embed.set_footer(text="Made with ❤️️  by Koders")
+    embed.timestamp = datetime.datetime.utcnow()
+    return embed
 
 def attendance_dm(date, time, day):
     embed = discord.Embed(title="Thank you for marking your attendance!", color=0x11806a)
@@ -81,144 +85,148 @@ def attendance_missed_dm(date, time, day):
     embed.add_field(name="Day", value=day, inline=True)
     return embed
 
-def show_leaves(start_date,end_date,user_id,check_username):
-    conn = sqlite3.connect('Attendance_DB.sqlite')
+async def leave_and_attendance(ctx, bot, start_date, end_date, users, mode):
+    """
+    This module shows attendance and leaves
+    :params: start_date(str), end_date(str), user_id(int), username(str)
+    :return: None
+    :mode: 1 - for attendance, 2 - leaves
+    """
+    logger.info("Show attendance called")
+
+    conn = sqlite3.connect('ATTENDANCE.sqlite')
     cur = conn.cursor()
     
-
-
-    def daterange(start_date, end_date):
-      for n in range(int((end_date - start_date).days)):
-          yield start_date + timedelta(n)
- 
-    leaves_Embed=simple_embed(title="Leaves for : "+str(check_username)+"\n",description="")
-
-    leave_list=""
+    if mode == 1:
+        cur.execute('''SELECT DATE, SHIFT, ABSENTEES FROM Attendance_table  WHERE DATE BETWEEN ? AND ?''',(start_date, end_date))
+    if mode == 2:
+        cur.execute('''SELECT DATE, SHIFT, PRESENTEES FROM Attendance_table  WHERE DATE BETWEEN ? AND ?''', (start_date,end_date))
+    data = cur.fetchall()
     
-    for single_date in daterange(start_date, end_date):
-      dates=str(single_date.strftime("%Y-%m-%d"))
-      leave_list=leave_list+"\n𝗗𝗔𝗧𝗘: "+dates+"\n"
+    if not data: # TODO Check if this is working
+      logger.warning("No attendance data found between those dates")
+      return None
+    else:
+    # TODO - try with string strips
+      morning_only, evening_only, full_day = {}, {}, {}
+      selected_dates = []
+      for each in data:
+          
+          if each[1] == "M":
+              morning_only[each[0]] = set(each[2].strip('"{}').split(', ')) # Adding members
+          elif each[1] == "E":
+              evening_only[each[0]] = set(each[2].strip('"{}').split(', ')) # Adding members
+          selected_dates.append(each[0])
+      
+        # Calculating all possible dates and adding members accordingly
+    selected_dates = set(selected_dates) # For finding unique dates
     
-      cur.execute('''SELECT Time FROM Attendance_DB WHERE  Attendance_DB.User_ID= ? AND Attendance_DB.Date=?''',[user_id,dates]) 
-      attendance = cur.fetchall()
-      
-      time_list=[]
-      time=str(attendance)
-      bad_chars = ['(', ')', ',', "'"]
-      for i in bad_chars: 
-        time=time.replace(i, '')
-      
-      time_list.append(time);
-      
+    for each_date in selected_dates:
+         full_day[each_date]=set()
+         for each_person in morning_only[each_date]:
+                   
+          try:
+                    if each_person in evening_only[each_date]:
+                        full_day[each_date].add(each_person)
+          except Exception as err:
+                  logger.error("Something went wrong while fetching the full day attendance")         
+         # if full day is found. removing from morning and evening
+         for each_person in full_day[each_date]:
+                        morning_only[each_date].remove(each_person)
+                        evening_only[each_date].remove(each_person)
+                
     
-      for j in time_list:
-       full_day="ME"
-       morning="M"
-       evening="E"
+    if users:
+     if mode == 1:
+            status = "Absent"
+     elif mode == 2:
+            status = "Present"
+    
+     for user in users:
+        day_full=0
+        morning=0
+        evening=0
+        dates=0
+        message=""
        
-       if((j.count(morning)==0) and (j.count(evening)==0 )): 
-            leave_list=leave_list+"Full Day leave"+"\n"
-       elif (j.count(full_day)>0):
-            leave_list=leave_list+"Full Day Present"+"\n"
-       elif((j.count(morning)==0) and j.count(evening)>0 ):
-            leave_list=leave_list+"Absent in morning"+"\n" 
-       elif((j.count(evening)==0) and (j.count(morning)>0)):
-            leave_list=leave_list+"Absent in evening shift"+"\n"   
-      
-    leaves_Embed.add_field(name='Leave List', value = leave_list, inline=False)  
-   
-     
-    return leaves_Embed
-    
-
-
-
-
-def show_attendance(start_date,end_date,user_id,check_username):
-    conn = sqlite3.connect('Attendance_DB.sqlite')
-    cur = conn.cursor()
-    def daterange(start_date, end_date):
-      for n in range(int((end_date - start_date).days)):
-          yield start_date + timedelta(n)
- 
-    attendence_Embed=simple_embed(title="Attendance for : "+str(check_username)+"\n",description="")
-
-    attendance_list=""
-    attendance_dates=0
-    full_present=0
-    morning_present=0
-    evening_present=0
-    absent=0
-    for single_date in daterange(start_date, end_date):
-      dates=str(single_date.strftime("%Y-%m-%d"))
-      attendance_dates=attendance_dates+1
-      attendance_list=attendance_list+"\n𝗗𝗔𝗧𝗘: "+dates+"\n"
-    
-      cur.execute('''SELECT Time FROM Attendance_DB WHERE  Attendance_DB.User_ID= ? AND Attendance_DB.Date=?''',[user_id,dates]) 
-      attendance = cur.fetchall()
-      
-      time_list=[]
-      time=str(attendance)
-      bad_chars = ['(', ')', ',', "'"]
-      for i in bad_chars: 
-        time=time.replace(i, '')
-      
-      time_list.append(time);
-      
-    
-      for j in time_list:
-       full_day="ME"
-       morning="M"
-       evening="E"
-       
-       if((j.count(morning)==0) and (j.count(evening)==0 )): 
-            attendance_list=attendance_list+"Full Day Absent"+"\n"
-            absent=absent+1
-       elif (j.count(full_day)>0):
-            attendance_list=attendance_list+"Full Day Present"+"\n"
-            full_present=full_present+1
-       elif((j.count(morning)==0) and j.count(evening)>0 ):
-            evening_present=evening_present+1
-            attendance_list=attendance_list+"Present in Evening shift"+"\n" 
-       elif((j.count(evening)==0) and (j.count(morning)>0)):
-            morning_present=morning_present+1
-            attendance_list=attendance_list+"Present in Morning shift"+"\n"   
-      
-    attendence_Embed.add_field(name='Attendance List', value = attendance_list, inline=False)  
-    
-    #graph
-    def addlabels(x,y):
-        for i in range(len(x)):
-         plt.text(i, y[i], y[i], ha = 'center',
+        not_there=set()
+        for each_date in selected_dates:
+                dates=dates+1
+                not_there=set(itertools.chain(full_day[each_date],morning_only[each_date],evening_only[each_date]))
+              
+                
+                if str(user) in not_there:
+                   
+                    if str(user) in full_day[each_date]:
+                                    message += each_date + ":  " + status + "  full day \n"
+                                    day_full=day_full+1
+                             
+                    elif str(user) in morning_only[each_date]:
+                                    message += each_date + ":  " + status + " in morning only \n"
+                                    morning=morning+1
+                        
+                    elif str(user) in evening_only[each_date]:
+                                    message += each_date + ":  " + status + " in evening only \n"
+                                    evening=evening+1
+                        
+                else:  
+                            message += each_date +": Not "+status+"\n" 
+        
+        #graph
+        def addlabels(x,y):
+            for i in range(len(x)):
+              plt.text(i, y[i], y[i], ha = 'center',
                  Bbox = dict(facecolor = 'grey', alpha =.8))
-    value = [attendance_dates,full_present,morning_present,evening_present,absent]
-    data = ('Total\nDates', 'Full Day\nPresent', 'Morning\nPresent','Evening\nPresent','Absent')
-    x_pos = np.arange(len(data))
-    save_filename='test.png'
-    plt.bar(x_pos, value, color = ['darkcyan'])
-    addlabels(data, value)
-    plt.title('Attendance Graph for @'+str(check_username))
-    plt.ylabel('values')
-    
-    plt.xticks(x_pos, data)
-    plt.savefig(save_filename,dpi=100)
-    plt.close()
-    
-    
-    return attendence_Embed,save_filename;
-    
+        value = [dates,morning,evening,day_full]
+        data = ('Total\nDates', 'Morning','Evening','Full')
+        x_pos = np.arange(len(data))
+        save_filename='test.png'
+        plt.bar(x_pos, value, color = ['darkcyan'])
+        addlabels(data, value)
+        plt.title(status+' Graph for @'+str(await bot.fetch_user(int(user))))
+        plt.ylabel('values')
 
-    
-def simple_embed(title, description):
-    embed = discord.Embed(
-            title = title,
-            description = description,
-            colour=0x11806a
-            )
-    embed.set_thumbnail(url="https://media.discordapp.net/attachments/700257704723087360/819643015470514236/SYM_TEAL.png?width=455&height=447")
-    embed.set_footer(text="Made with ❤️️  by Koders")
-    embed.timestamp = datetime.datetime.utcnow()
-    return embed
+        plt.xticks(x_pos, data)
+        plt.savefig(save_filename,dpi=100)
+        plt.close()
+        embed=simple_embed(title="Result for: "+str(await bot.fetch_user(int(user)))+"\n",description="")
+        embed.add_field(name='Here are the details', value=message, inline=False)
+        await ctx.send(embed=embed,file=discord.File(save_filename), delete_after = 20)
+        
+        
+        
+        
+async def ctx_input(ctx, bot, embed, timeout = 60.0):
+    try:
+        msg = await bot.wait_for(
+            "message",
+            timeout=timeout,
+            check=lambda message: message.author == ctx.author
+        )
+        if msg:
+            await embed.delete()
+            _id = msg.content
+            await msg.delete()
+            return _id
+    except asyncio.TimeoutError as err:
+        await embed.delete()
+        await ctx.send('Cancelling due to timeout.', delete_after = timeout)
+        return None
+
+async def data_input(ctx, bot):
+    start_date_embed=discord.Embed(title="Enter start date",description="Please enter in this format only 'yyyy-mm-dd'",colour=0x11806a)
+    start=await ctx.send(embed=start_date_embed,delete_after=60)
+    start_date = await ctx_input(ctx, bot, start)
+    if not start_date:
+        return
+
+    end_date_embed=discord.Embed(title="Enter end date",description="Please enter in this format only 'yyyy-mm-dd'",colour=0x11806a)
+    end=await ctx.send(embed=end_date_embed,delete_after=60)
+    end_date = await ctx_input(ctx, bot, end)
+    if not end_date:
+        return
+    return start_date, end_date;
+
 
 _rxn_no = {'1️⃣':1, '2️⃣':2, '3️⃣':3,'4️⃣':4}
 
@@ -248,22 +256,3 @@ async def take_reaction_no(ctx, rxn_amnt, _embed, bot, timeout=300.0):
     except asyncio.TimeoutError:
         await ctx.delete()
 
-        
-async def ctx_input(ctx, bot, embed, timeout = 60.0):
-    try:
-        msg = await bot.wait_for(
-            "message",
-            timeout=timeout,
-            check=lambda message: message.author == ctx.author
-        )
-
-        if msg:
-            await embed.delete()
-            _id = msg.content
-            await msg.delete()
-            return _id
-
-    except asyncio.TimeoutError as err:
-        await embed.delete()
-        await ctx.send('Cancelling due to timeout.', delete_after = timeout)
-        return None
