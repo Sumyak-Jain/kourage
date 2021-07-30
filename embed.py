@@ -85,6 +85,7 @@ def attendance_missed_dm(date, time, day):
     embed.add_field(name="Day", value=day, inline=True)
     return embed
 
+
 async def leave_and_attendance(ctx, bot, start_date, end_date, users, mode):
     """
     This module shows attendance and leaves
@@ -94,108 +95,128 @@ async def leave_and_attendance(ctx, bot, start_date, end_date, users, mode):
     """
     logger.info("Show attendance called")
 
-    conn = sqlite3.connect('ATTENDANCE.sqlite')
+    conn = sqlite3.connect('db/ATTENDANCE.sqlite')
     cur = conn.cursor()
-    
+
     if mode == 1:
         cur.execute('''SELECT DATE, SHIFT, ABSENTEES FROM Attendance_table  WHERE DATE BETWEEN ? AND ?''',(start_date, end_date))
     if mode == 2:
         cur.execute('''SELECT DATE, SHIFT, PRESENTEES FROM Attendance_table  WHERE DATE BETWEEN ? AND ?''', (start_date,end_date))
     data = cur.fetchall()
-    
+
     if not data: # TODO Check if this is working
-      logger.warning("No attendance data found between those dates")
-      return None
+        no_data_embed=discord.Embed(title="No attendance data found between " + str(start_date) + ' ' + str(end_date),description="",colour=0x11806a)
+        await ctx.send(embed=no_data_embed,delete_after=60)
+        logger.warning("No attendance data found between those dates")
+        return None
     else:
-    # TODO - try with string strips
-      morning_only, evening_only, full_day = {}, {}, {}
-      selected_dates = []
-      for each in data:
-          
-          if each[1] == "M":
-              morning_only[each[0]] = set(each[2].strip('"{}').split(', ')) # Adding members
-          elif each[1] == "E":
-              evening_only[each[0]] = set(each[2].strip('"{}').split(', ')) # Adding members
-          selected_dates.append(each[0])
-      
+        morning_only, evening_only, full_day = {}, {}, {}
+        selected_dates = []
+        for each in data:
+
+            if each[1] == "M":
+                morning_only[each[0]] = set(each[2].strip('"{}').split(', ')) # Adding members
+            elif each[1] == "E":
+                evening_only[each[0]] = set(each[2].strip('"{}').split(', ')) # Adding members
+            selected_dates.append(each[0])
+
         # Calculating all possible dates and adding members accordingly
     selected_dates = set(selected_dates) # For finding unique dates
-    
-    for each_date in selected_dates:
-         full_day[each_date]=set()
-         for each_person in morning_only[each_date]:
-                   
-          try:
-                    if each_person in evening_only[each_date]:
-                        full_day[each_date].add(each_person)
-          except Exception as err:
-                  logger.error("Something went wrong while fetching the full day attendance")         
-         # if full day is found. removing from morning and evening
-         for each_person in full_day[each_date]:
-                        morning_only[each_date].remove(each_person)
-                        evening_only[each_date].remove(each_person)
-                
-    
-    if users:
-     if mode == 1:
-            status = "Absent"
-     elif mode == 2:
-            status = "Present"
-    
-     for user in users:
-        day_full=0
-        morning=0
-        evening=0
-        dates=0
-        message=""
-       
-        not_there=set()
-        for each_date in selected_dates:
-                dates=dates+1
-                not_there=set(itertools.chain(full_day[each_date],morning_only[each_date],evening_only[each_date]))
-              
-                
-                if str(user) in not_there:
-                   
-                    if str(user) in full_day[each_date]:
-                                    message += each_date + ":  " + status + "  full day \n"
-                                    day_full=day_full+1
-                             
-                    elif str(user) in morning_only[each_date]:
-                                    message += each_date + ":  " + status + " in morning only \n"
-                                    morning=morning+1
-                        
-                    elif str(user) in evening_only[each_date]:
-                                    message += each_date + ":  " + status + " in evening only \n"
-                                    evening=evening+1
-                        
-                else:  
-                            message += each_date +": Not "+status+"\n" 
-        
-        #graph
-        def addlabels(x,y):
-            for i in range(len(x)):
-              plt.text(i, y[i], y[i], ha = 'center',
-                 Bbox = dict(facecolor = 'grey', alpha =.8))
-        value = [dates,morning,evening,day_full]
-        data = ('Total\nDates', 'Morning','Evening','Full')
-        x_pos = np.arange(len(data))
-        save_filename='test.png'
-        plt.bar(x_pos, value, color = ['darkcyan'])
-        addlabels(data, value)
-        plt.title(status+' Graph for @'+str(await bot.fetch_user(int(user))))
-        plt.ylabel('values')
 
-        plt.xticks(x_pos, data)
-        plt.savefig(save_filename,dpi=100)
-        plt.close()
-        embed=simple_embed(title="Result for: "+str(await bot.fetch_user(int(user)))+"\n",description="")
-        embed.add_field(name='Here are the details', value=message, inline=False)
-        await ctx.send(embed=embed,file=discord.File(save_filename), delete_after = 20)
-        
-        
-        
-        
+    for each_date in selected_dates:
+        full_day[each_date]=set()
+        if not morning_only:
+            logger.warning("no morning data")
+            break
+        if not evening_only:
+            logger.warning("no evening data")
+            break
+        for each_person in morning_only[each_date]:
+
+            try:
+                if each_person in evening_only[each_date]:
+                    full_day[each_date].add(each_person)
+            except Exception as err:
+                logger.error("Something went wrong while fetching the full day attendance")
+        # if full day is found. removing from morning and evening
+        for each_person in full_day[each_date]:
+            morning_only[each_date].remove(each_person)
+            evening_only[each_date].remove(each_person)
+
+
+    if users:
+        if mode == 1:
+            status = "Absent"
+        elif mode == 2:
+            status = "Present"
+
+        print(type(users))
+        for user in users:
+            print(await bot.fetch_user(int(user)))
+            day_full=0
+            morning=0
+            evening=0
+            dates=0
+            message=""
+
+            not_there=set()
+            if not morning_only:
+                not_there=set(itertools.chain(full_day[each_date],evening_only[each_date]))
+            elif not evening_only:
+                not_there=set(itertools.chain(full_day[each_date],morning_only[each_date]))
+            elif not full_day:
+                not_there=set(itertools.chain(morning_only[each_date],evening_only[each_date]))
+            else:
+                not_there=set(itertools.chain(full_day[each_date],morning_only[each_date],evening_only[each_date]))
+
+            for each_date in selected_dates:
+
+                dates=dates+1
+
+                if str(user) in not_there:
+
+                    try:
+                        if str(user) in full_day[each_date]:
+                            message += each_date + ":  " + status + "  full day \n"
+                            day_full=day_full+1
+                    except Exception as e:
+                        pass
+                    try:
+                        if str(user) in morning_only[each_date]:
+                            message += each_date + ":  " + status + " in morning only \n"
+                            morning=morning+1
+                    except Exception as e:
+                        pass
+                    try:
+                        if str(user) in evening_only[each_date]:
+                            message += each_date + ":  " + status + " in evening only \n"
+                            evening=evening+1
+                    except Exception as e:
+                        pass
+                else:
+                    message += each_date +": Not "+status+"\n"
+
+            #graph
+            def addlabels(x,y):
+                for i in range(len(x)):
+                    plt.text(i, y[i], y[i], ha = 'center',
+                       Bbox = dict(facecolor = 'grey', alpha =.8))
+            value = [dates,morning,evening,day_full]
+            data = ('Total\nDates', 'Morning','Evening','Full')
+            x_pos = np.arange(len(data))
+            save_filename='test.png'
+            plt.bar(x_pos, value, color = ['darkcyan'])
+            addlabels(data, value)
+            plt.title(status+' Graph for @'+str(await bot.fetch_user(int(user))))
+            plt.ylabel('values')
+
+            plt.xticks(x_pos, data)
+            plt.savefig(save_filename,dpi=100)
+            plt.close()
+            embed=simple_embed(title="Result for: "+str(await bot.fetch_user(int(user)))+"\n",description="")
+            embed.add_field(name='Here are the details', value=message, inline=False)
+            await ctx.send(embed=embed,file=discord.File(save_filename), delete_after = 20)
+
 async def ctx_input(ctx, bot, embed, timeout = 60.0):
     try:
         msg = await bot.wait_for(
@@ -255,4 +276,3 @@ async def take_reaction_no(ctx, rxn_amnt, _embed, bot, timeout=300.0):
 
     except asyncio.TimeoutError:
         await ctx.delete()
-
