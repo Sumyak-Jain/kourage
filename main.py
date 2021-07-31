@@ -282,6 +282,30 @@ async def attendance(ctx, *args):
         await embed.leave_and_attendance(ctx, bot, start_date, end_date, users, 2)
     await ctx.message.delete()
 
+    
+
+@bot.command() #FIXME
+async def export_leaves(ctx):
+    logger.info(str(ctx.author.name))
+    author_role = ctx.author.roles
+    role = ''
+    for i in author_role:
+        if str(i)=="Kore":
+            role=str(i)
+            break;
+        else:
+            role="Koders"
+    if str(role) != "Kore" :
+        not_access_embed=discord.Embed(title="Sorry You dont have access to view others leaves!",description="",colour=0x11806a)
+        await ctx.send(embed=not_access_embed,delete_after=60)
+        logger.warning(str(ctx.author.id)+" dont have access")
+        return
+
+    start_date, end_date = await embed.data_input(ctx,bot)
+    await embed.export_csv(ctx,start_date,end_date)
+    await ctx.message.delete()
+
+    
 #manual mark specific
 @bot.command()
 @commands.has_any_role("Kore")
