@@ -217,6 +217,35 @@ async def leave_and_attendance(ctx, bot, start_date, end_date, users, mode):
             embed.add_field(name='Here are the details', value=message, inline=False)
             await ctx.send(embed=embed,file=discord.File(save_filename), delete_after = 20)
 
+async def export_csv(ctx,start_date,end_date): 
+    logger.info("export csv called")
+    conn = sqlite3.connect('ATTENDANCE.sqlite')
+    cur = conn.cursor()
+
+    cur.execute('''SELECT DATE, SHIFT, ABSENTEES FROM Attendance_table  WHERE DATE BETWEEN ? AND ?''',(start_date, end_date))
+    data = cur.fetchall()
+    if not data: # TODO Check if this is working
+        no_data_embed=discord.Embed(title="No attendance data found between "+str(start_date)+" and "+str(end_date),description="",colour=0x11806a)
+        await ctx.send(embed=no_data_embed,delete_after=60)
+        logger.warning("No attendance data found between those dates")
+        return None
+    else:
+        try:
+         fields = ['Date', 'Shift', 'Absentees']
+         absentees_file = 'Absentees.csv'
+         embed=simple_embed(title="Absentees CSV FILE ",description="of dates("+str(start_date)+"   "+str(end_date)+")")
+         with open(absentees_file, 'w') as csvfile: 
+     
+            csvwriter = csv.writer(csvfile)  
+            csvwriter.writerow(fields) 
+            csvwriter.writerows(data) 
+            logger.info("CSV write done")
+            logger.info(data)
+            await ctx.send(embed=embed,file=discord.File(absentees_file), delete_after = 60)
+            logger.info("Absentees("+str(start_date)+"  "+str(end_date)+") CSV sent")
+        except Exception as e: 
+            logger.error("Error sending csv")
+
 async def ctx_input(ctx, bot, embed, timeout = 60.0):
     try:
         msg = await bot.wait_for(
