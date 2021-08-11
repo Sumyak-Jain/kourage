@@ -49,4 +49,4 @@ git_branch=`git branch 2>/dev/null | grep '^*' | colrm 1 2 | tr -d '\n' && echo 
 
 
 run_cmd "docker build -t ${git_branch} ." "Docker file built."
-run_cmd "docker run -e TOKEN -e CHANNEL_ID -e REDMINE_KEY -v $(pwd)/stream/files:/app/out ${git_branch}" "Run"
+run_cmd "docker run -e TOKEN  -e REDMINE_KEY -v $(pwd)/stream/files:/app/out ${git_branch}" "Run"
