@@ -45,104 +45,21 @@ def simple_embed(title, description):
     return embed
 
 
-_rxn_no = {'1️⃣':1, '2️⃣':2, '3️⃣':3,'4️⃣':4}
-_rxn = {'😍':1,'🙂':2,'😑':3,'😕':4,'😡':5}
-_rxn_NA = {'❌':1,'✅':2}
-async def take_reaction_no(ctx, rxn_amnt, _embed, bot, timeout=300.0):
-    rxn = dict()
-    _i = 1
-    for i in _rxn_no:
-        if _i > rxn_amnt:
-            break
-        rxn[i] = _i
-        _i += 1
-
-    for i in rxn:
-        await _embed.add_reaction(i)
-
-    def check(reaction, user):
-        _c1 = user.bot is not True and user == ctx.author
-        return _c1 and str(reaction.emoji) in rxn
-
-    try:
-        result = await bot.wait_for('reaction_add', check=check, timeout=timeout)
-        reaction, user = result
-
-        ret = (None, rxn[str(reaction)]) [ str(reaction) in rxn ]
-        return ret, _embed
-
-    except asyncio.TimeoutError:
-        await ctx.delete()
-
-async def take_reaction(ctx, rxn_amnt, _embed, bot, timeout=300.0):
-    rxn = dict()
-    _i = 1
-    for i in _rxn:
-        if _i > rxn_amnt:
-            break
-        rxn[i] = _i
-        _i += 1
-
-    for i in rxn:
-        await _embed.add_reaction(i)
-
-    def check(reaction, user):
-        _c1 = user.bot is not True and user == ctx.author
-        return _c1 and str(reaction.emoji) in rxn
-
-    try:
-        result = await bot.wait_for('reaction_add', check=check, timeout=timeout)
-        reaction, user = result
-
-        ret = (None, rxn[str(reaction)]) [ str(reaction) in rxn ]
-        return ret, _embed
-
-    except asyncio.TimeoutError:
-        await ctx.delete()
- 
-async def take_reaction_NA(ctx, rxn_amnt, _embed, bot, timeout=300.0):
-    rxn = dict()
-    _i = 1
-    for i in _rxn_NA:
-        if _i > rxn_amnt:
-            break
-        rxn[i] = _i
-        _i += 1
-
-    for i in rxn:
-        await _embed.add_reaction(i)
-
-    def check(reaction, user):
-        _c1 = user.bot is not True and user == ctx.author
-        return _c1 and str(reaction.emoji) in rxn
-
-    try:
-        result = await bot.wait_for('reaction_add', check=check, timeout=timeout)
-        reaction, user = result
-
-        ret = (None, rxn[str(reaction)]) [ str(reaction) in rxn ]
-        return ret, _embed
-
-    except asyncio.TimeoutError:
-        await ctx.delete()       
-        
-        
-               
-async def ctx_input(ctx, bot, embed, timeout):
+                       
+async def ctx_input(ctx, bot, embed, timeout = 60.0):
     try:
         msg = await bot.wait_for(
             "message",
             timeout=timeout,
             check=lambda message: message.author == ctx.author
         )
-
         if msg:
             await embed.delete()
             _id = msg.content
             await msg.delete()
             return _id
-
     except asyncio.TimeoutError as err:
+        logger.error("Cancelling due to timeout")
         await embed.delete()
         await ctx.send('Cancelling due to timeout.', delete_after = timeout)
         return None
