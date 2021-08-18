@@ -39,8 +39,6 @@ def simple_embed(title, description):
             colour=0x11806a
             )
     
-    embed.set_footer(text="Made with ❤️️  by Koders")
-    embed.timestamp = datetime.datetime.utcnow()
     return embed
 
 
