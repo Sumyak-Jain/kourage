@@ -26,13 +26,15 @@ async def spent_time():
 
  response = requests.request("GET", url, headers=headers, data=payload).json()
  
- today_date=date.today()
- if (response["total_count"])==0:  
+ 
+ if (response["total_count"])==0: 
+   today_date=date.today()
    embed=embeds.simple_embed(title="No one logged there data on "+str(today_date),description="")
    await channel.send(embed=embed)
    logger.info("no data found")
  
  else: 
+  today_date=response["time_entries"][0]["spent_on"]
   time_list=[]
   data_list=[]
   
