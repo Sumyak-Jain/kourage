@@ -61,8 +61,8 @@ async def spent_time():
   plt.tight_layout()
   plt.savefig(save_filename,dpi=100)
   plt.close() 
-  embed=embeds.simple_embed(title="",description="")
-  await channel.send(embed=embed,file=discord.File(save_filename))
+
+  await channel.send(file=discord.File(save_filename))
   logger.info("spent time graph shown of "+str(today_date))
 
 
