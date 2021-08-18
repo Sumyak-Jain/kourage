@@ -7,12 +7,12 @@ import discord
 import  os
 import embeds
 from discord.ext.tasks import loop
-hdr1 = {'X-Redmine-API-Key': '8ad7c8be84d5e69ac072cff0c065b9dfab5bbc3f'}
+hdr1 = {'X-Redmine-API-Key':os.environ.get("REDMINE_KEY")}
 bot = commands.Bot(command_prefix="~")
 logger = embeds.Logger("kourage-Spent-Time")
 
 #TODO 
-#we can delete after for embeds
+#we can add delete after for embeds
 
 @loop(hours=24)
 async def spent_time():
